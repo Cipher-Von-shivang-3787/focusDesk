@@ -1,29 +1,49 @@
 # FocusDesk
 
-Study planner + Pomodoro timer + **notes-to-quiz** powered by **DeepSeek-R1** (open weights, MIT license) running locally with Ollama. Claude (Anthropic API) is an optional extra provider. Installable as a PWA. No backend, no API keys, no accounts.
+Built for my friend Dev during the DEV Hacktoberfest Weekend Challenge: Build for a Friend (October 2026).
+All code was written during the challenge window.
 
-## Choose your AI
-Open **Settings**. The default is DeepSeek via Ollama, which keeps everything on your machine. You can switch to Claude by pasting an API key (stored only in your browser).
+FocusDesk is a study planner, Pomodoro timer and **notes-to-quiz** tool. A small open-weight model runs **locally with Ollama** and writes quizzes from your own notes. Your notes never leave your computer, and it works offline once the model is downloaded.
 
-## Run it
+## Features
+- **Pomodoro timer:** focus, short break and long break, with adjustable lengths.
+- **Study tasks:** estimated pomodoros per task, an active task, and daily stats (sessions, focus minutes, day streak).
+- **Notes to quiz:** paste notes, get multiple-choice questions with explanations.
+- **Spaced repetition:** missed questions come back after 0, 1, 3, 7, 14 and 30 days.
+- **Weak-spot memory:** the app tracks topics you miss and asks the model for more questions on them.
+- **Backup and restore:** save everything to a file (Settings). Your API key is never included.
+
+## Models
+- **Recommended: `phi4-mini`** (Microsoft, MIT license). Fast on a normal laptop and returns clean JSON. This is the model I use for quizzes.
+- **DeepSeek-R1** (`deepseek-r1:8b`, distilled, MIT license) also works, but it writes out its reasoning before answering, so a quiz can take a minute or more on a laptop. The app's initial model setting is `deepseek-r1:8b`, so change it in Settings if you want `phi4-mini`.
+- Any other Ollama model works too. Type its name in **Settings > Model**.
+- Optional: Claude (Anthropic API) can be selected as a provider by pasting an API key in Settings. The project is built around the local open model.
+
+## Setup on Windows 11
+1. Install Ollama from https://ollama.com/download.
+2. Open PowerShell and download the model:
+   ```
+   ollama pull phi4-mini
+   ```
+3. Allow the web page to reach Ollama, then quit and reopen Ollama from the system tray:
+   ```
+   setx OLLAMA_ORIGINS "*"
+   ```
+4. Check `http://localhost:11434` in your browser. It should say "Ollama is running".
+5. Open `index.html` (double-click it).
+6. Go to **Settings**, set **Model** to `phi4-mini`, and click outside the box to save.
+7. Go to **Quiz**, paste about a page of notes, and press **Make quiz from notes**.
+
+If you prefer a local server (needed for the installable PWA features):
 ```
-ollama pull deepseek-r1:8b
-OLLAMA_ORIGINS="*" ollama serve
-python3 -m http.server 8000   # then open http://localhost:8000
+python -m http.server 8000
 ```
+Then open `http://localhost:8000`.
 
-## How the quiz works
-1. Paste notes (or load a .txt/.md file) and press **Make quiz**.
-2. The local model writes multiple-choice questions as JSON.
-3. Every card goes into a spaced-repetition deck (Leitner boxes: 0, 1, 3, 7, 14, 30 days). Missed cards drop back to box 0.
-4. **Review due cards** replays whatever is due today.
-
-## Using it on a phone
-Host the folder on GitHub Pages and install it from the browser menu. The timer, tasks and review deck work offline. Generating new quizzes needs Ollama, so make them on the laptop, press **Export deck**, and **Import deck** on the phone.
+## Troubleshooting
+- **Could not reach Ollama:** make sure Ollama is running and you restarted it after `setx OLLAMA_ORIGINS`.
+- **Model not found:** the name in Settings must match `ollama list` exactly.
+- **Model did not return valid JSON:** try shorter notes (about a page) or press the button again.
 
 ## Files
-`index.html` app · `sw.js` offline cache · `manifest.json` + icons for install
-
-## Memory
-- Tasks, stats, the quiz deck and settings are saved in the browser. Use **Settings > Back up everything** to save them to a file and **Restore from backup** to load them again (the API key is never included).
-- The app tracks which topics you miss. Your weakest topics are sent with each new quiz request so the model asks more about them.
+`index.html` app, `sw.js` offline cache, `manifest.json` and icons for install, `LICENSE` (MIT).
