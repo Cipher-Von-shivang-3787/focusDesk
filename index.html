@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<title>FocusDesk</title>
+<style>
+:root{--bg:#fafaf9;--ink:#1c1917;--mute:#78716c;--line:#e7e5e4;--acc:#0f766e;--on:#fff;--bad:#b91c1c}
+@media(prefers-color-scheme:dark){:root{--bg:#161514;--ink:#f5f5f4;--mute:#a8a29e;--line:#2b2927;--acc:#2dd4bf;--on:#0b1f1c;--bad:#f87171}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 20px 60px}
+h1{font-size:1.1rem;font-weight:600;margin:0 0 14px}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:28px}
+nav button{border:0;border-bottom:2px solid transparent;border-radius:0;padding:8px 12px;margin-bottom:-1px;color:var(--mute);background:none}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--acc);font-weight:600}
+button,input,select,textarea{font:inherit;color:var(--ink)}
+button{cursor:pointer;border:1px solid var(--line);background:none;border-radius:8px;padding:8px 14px}
+button:hover{border-color:var(--mute)}
+button.p{background:var(--acc);color:var(--on);border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.6;cursor:default}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+input,select,textarea{width:100%;background:transparent;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+textarea{resize:vertical;margin-bottom:12px}
+label{display:block;color:var(--mute);font-size:.88rem;margin:14px 0 4px}
+.c{text-align:center}
+.modes{display:flex;justify-content:center;gap:18px;margin-bottom:6px}
+.modes button{border:0;padding:4px 0;color:var(--mute);border-radius:0}
+.modes button[aria-pressed=true]{color:var(--ink);font-weight:600;box-shadow:0 2px 0 var(--acc)}
+.time{font-size:5.5rem;font-weight:300;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.1;margin:18px 0 8px}
+.bar{height:3px;background:var(--line);border-radius:3px;margin:0 auto 18px;max-width:320px}
+.bar i{display:block;height:100%;width:0;background:var(--acc);border-radius:3px;transition:width .3s linear}
+.cur{color:var(--mute);min-height:1.6em;margin:0 0 22px}
+.stats{margin-top:36px;color:var(--mute);font-size:.92rem}
+.row{display:flex;gap:8px;margin-bottom:6px}
+.row input[type=number]{width:72px;flex:none}
+ul{list-style:none;margin:16px 0;padding:0}
+li{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+li input{width:auto}
+.t{flex:1;cursor:pointer;overflow-wrap:anywhere}
+li.act .t{font-weight:600}
+li.act .t::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--acc);margin-right:8px}
+li.done .t{text-decoration:line-through;color:var(--mute)}
+.m{color:var(--mute);font-size:.88rem;white-space:nowrap}
+.x{border:0;color:var(--mute);padding:2px 8px}
+.msg{color:var(--mute);font-size:.92rem;min-height:1.4em;margin:10px 0 0}
+.msg.err{color:var(--bad)}
+.q{font-size:1.15rem;margin:0 0 14px}
+.ch{display:grid;gap:8px;margin-bottom:14px}
+.ch button{text-align:left}
+.ch .ok{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.ch .no{border-color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad)}
+.links{display:flex;gap:16px;margin-top:22px;font-size:.9rem}
+.links button,.links label{border:0;padding:0;margin:0;color:var(--mute);text-decoration:underline;cursor:pointer;display:inline;font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+<h1>FocusDesk</h1>
+<nav role="tablist">
+  <button data-t="focus" aria-selected="true">Focus</button>
+  <button data-t="tasks" aria-selected="false">Tasks</button>
+  <button data-t="quiz" aria-selected="false">Quiz</button>
+  <button data-t="set" aria-selected="false">Settings</button>
+</nav>
+
+<section data-v="focus" class="c">
+  <div class="modes">
+    <button data-m="focus" aria-pressed="true">Focus</button>
+    <button data-m="short" aria-pressed="false">Short break</button>
+    <button data-m="long" aria-pressed="false">Long break</button>
+  </div>
+  <div class="time" id="time" role="timer">25:00</div>
+  <div class="bar"><i id="fill"></i></div>
+  <p class="cur" id="cur"></p>
+  <button class="p" id="go">Start</button>
+  <button id="reset">Reset</button>
+  <p class="stats" id="stats"></p>
+</section>
+
+<section data-v="tasks" hidden>
+  <div class="row">
+    <input type="text" id="title" placeholder="What are you studying?" aria-label="Task name">
+    <input type="number" id="est" value="2" min="1" max="20" aria-label="Estimated pomodoros" title="Estimated pomodoros">
+  </div>
+  <div class="row"><button class="p" id="addBtn">Add task</button><button id="ai">Break into steps with AI</button></div>
+  <p class="msg" id="tmsg" role="status"></p>
+  <ul id="list"></ul>
+</section>
+
+<section data-v="quiz" hidden>
+  <div id="setup">
+    <textarea id="notes" rows="8" placeholder="Paste your notes here" aria-label="Notes"></textarea>
+    <div class="row"><input type="number" id="nq" value="5" min="3" max="10" aria-label="Number of questions" title="Number of questions"><button class="p" id="gen" style="flex:1">Make quiz from notes</button></div>
+    <button id="rev" style="width:100%;margin-top:6px"></button>
+    <p class="msg" id="weak"></p>
+    <p class="msg" id="qmsg" role="status"></p>
+    <div class="links">
+      <label>Load .txt file<input type="file" id="file" accept=".txt,.md" hidden></label>
+      <button id="exp">Export deck</button>
+      <label>Import deck<input type="file" id="imp" accept=".json" hidden></label>
+    </div>
+  </div>
+  <div id="quiz" hidden></div>
+</section>
+
+<section data-v="set" hidden>
+  <label for="pv">AI provider</label>
+  <select id="pv"><option value="ollama">DeepSeek via Ollama (local, open model)</option><option value="claude">Claude (Anthropic API, optional)</option></select>
+  <div id="gClaude">
+    <label for="key">Claude API key</label>
+    <input type="password" id="key" placeholder="sk-ant-..." autocomplete="off">
+    <label for="cm">Claude model</label>
+    <input type="text" id="cm">
+    <p class="msg">Your key is saved only in this browser and sent only to api.anthropic.com.</p>
+  </div>
+  <div id="gOllama">
+    <label for="ou">Ollama address</label>
+    <input type="text" id="ou">
+    <label for="om">Model</label>
+    <input type="text" id="om">
+    <p class="msg">Default: deepseek-r1:8b. Other sizes: 7b, 14b, 32b. Start Ollama with OLLAMA_ORIGINS="*" so this page can reach it.</p>
+  </div>
+  <label>Backup</label>
+  <div class="links" style="margin-top:4px"><button id="bk">Back up everything</button><label>Restore from backup<input type="file" id="rs" accept=".json" hidden></label></div>
+  <p class="msg" id="smsg" role="status"></p>
+  <label>Timer lengths in minutes: focus, short break, long break</label>
+  <div class="row"><input type="number" id="cf" min="1" max="120" aria-label="Focus"><input type="number" id="cs" min="1" max="60" aria-label="Short break"><input type="number" id="cl" min="1" max="60" aria-label="Long break"></div>
+</section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const K='focusdesk-v1';
+const def={tasks:[],active:null,log:{},deck:[],topics:{},cfg:{focus:25,short:5,long:15},
+  ai:{provider:'ollama',key:'',claudeModel:'claude-haiku-4-5-20251001',url:'http://localhost:11434',model:'deepseek-r1:8b'}};
+let S=def;
+try{const o=JSON.parse(localStorage.getItem(K)||'{}');S={...def,...o,cfg:{...def.cfg,...o.cfg},ai:{...def.ai,...o.ai}}}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const today=()=>new Date().toISOString().slice(0,10);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const say=(sel,t,err)=>{const e=$(sel);e.textContent=t;e.classList.toggle('err',!!err)};
+
+/* tabs */
+function show(v){$$('[data-v]').forEach(s=>s.hidden=s.dataset.v!==v);$$('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===v))}
+$$('nav button').forEach(b=>b.onclick=()=>show(b.dataset.t));
+
+/* timer */
+let mode='focus',left=S.cfg.focus*60,total=left,timer=null,cycle=0,endAt=0;
+function draw(){
+  const m=String(Math.floor(left/60)).padStart(2,'0'),s=String(left%60).padStart(2,'0');
+  $('#time').textContent=m+':'+s;
+  document.title=(timer?m+':'+s+' · ':'')+'FocusDesk';
+  $('#fill').style.width=(100*(1-left/total))+'%';
+  $('#go').textContent=timer?'Pause':'Start';
+  $$('.modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===mode));
+  const t=S.tasks.find(t=>t.id===S.active);
+  $('#cur').textContent=mode!=='focus'?'Take a break. Stand up and drink some water.':t?t.title:'No task selected. Pick one in Tasks.';
+}
+function setMode(m){clearInterval(timer);timer=null;mode=m;left=total=S.cfg[m]*60;draw()}
+function toggle(){
+  if(timer){clearInterval(timer);timer=null;draw();return}
+  endAt=Date.now()+left*1000;
+  timer=setInterval(()=>{left=Math.max(0,Math.round((endAt-Date.now())/1000));left?draw():finish()},250);draw();
+}
+function finish(){
+  clearInterval(timer);timer=null;beep();
+  if(mode==='focus'){
+    const d=today();S.log[d]=S.log[d]||{n:0,min:0};S.log[d].n++;S.log[d].min+=S.cfg.focus;
+    const t=S.tasks.find(t=>t.id===S.active);if(t)t.done_p=(t.done_p||0)+1;
+    cycle++;save();render();setMode(cycle%4===0?'long':'short');
+  }else setMode('focus');
+}
+function beep(){try{const c=new AudioContext(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);g.gain.value=.15;o.frequency.value=660;o.start();o.stop(c.currentTime+.4)}catch(e){}}
+$('#go').onclick=toggle;$('#reset').onclick=()=>setMode(mode);
+$$('.modes button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+
+/* stats + tasks */
+function streak(){let n=0,d=new Date();if(!S.log[d.toISOString().slice(0,10)])d.setDate(d.getDate()-1);while(S.log[d.toISOString().slice(0,10)]){n++;d.setDate(d.getDate()-1)}return n}
+function render(){
+  const l=S.log[today()]||{n:0,min:0},st=streak();
+  $('#stats').textContent=`Today: ${l.n} session${l.n===1?'':'s'}, ${l.min} min`+(st?` · ${st}-day streak`:'');
+  const ul=$('#list');ul.innerHTML=S.tasks.length?'':'<li class="m">No tasks yet.</li>';
+  S.tasks.forEach(t=>{
+    const li=document.createElement('li');li.className=(t.id===S.active?'act ':'')+(t.done?'done':'');
+    li.innerHTML=`<input type="checkbox" ${t.done?'checked':''} aria-label="Done"><span class="t" tabindex="0" role="button">${esc(t.title)}</span><span class="m">${t.done_p||0}/${t.est}</span><button class="x" aria-label="Delete">✕</button>`;
+    li.querySelector('input').onchange=e=>{t.done=e.target.checked;save();render()};
+    const pick=()=>{S.active=t.id;save();render();draw()},sp=li.querySelector('.t');
+    sp.onclick=pick;sp.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick()}};
+    li.querySelector('.x').onclick=()=>{S.tasks=S.tasks.filter(x=>x!==t);if(S.active===t.id)S.active=null;save();render();draw()};
+    ul.appendChild(li);
+  });
+}
+function addTask(title,est){
+  title=title.trim();if(!title)return;
+  S.tasks.push({id:Date.now()+Math.random(),title,est:est||1,done:false,done_p:0});
+  if(!S.active)S.active=S.tasks[S.tasks.length-1].id;
+  save();render();draw();
+}
+$('#addBtn').onclick=()=>{addTask($('#title').value,+$('#est').value);$('#title').value=''};
+$('#title').onkeydown=e=>{if(e.key==='Enter')$('#addBtn').click()};
+
+/* AI: Claude API or local Ollama */
+async function ask(prompt){
+  try{return await ask1(prompt)}catch(e){if(/valid JSON/.test(e.message))return await ask1(prompt);throw e}
+}
+async function ask1(prompt){
+  const a=S.ai;
+  if(a.provider==='claude'){
+    if(!a.key)throw new Error('Add your Claude API key in Settings first.');
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'content-type':'application/json','x-api-key':a.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:a.claudeModel,max_tokens:2500,messages:[{role:'user',content:prompt+'\n\nReply with JSON only, no other text.'}]})});
+    if(!r.ok)throw new Error(r.status===401?'Claude rejected the API key.':'Claude API error '+r.status+'.');
+    const t=(await r.json()).content.map(b=>b.text||'').join('');
+    return JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1));
+  }
+  const r=await fetch(a.url.replace(/\/$/,'')+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:a.model,stream:false,...(/r1/i.test(a.model)?{}:{format:'json'}),options:{num_ctx:8192,temperature:.3},prompt:prompt+'\n\nReply with JSON only, no other text.'})}).catch(()=>{throw new Error('Could not reach Ollama. Is it running?')});
+  if(!r.ok)throw new Error('Ollama error '+r.status+'. Check the model name matches "ollama list".');
+  const t=((await r.json()).response||'').replace(/<think>[\s\S]*?(<\/think>|$)/g,'');
+  try{return JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1))}catch(e){throw new Error('The model did not return valid JSON. Try shorter notes, or switch to phi4-mini in Settings.')}
+}
+$('#ai').onclick=async()=>{
+  const goal=$('#title').value.trim();
+  if(!goal){say('#tmsg','Type a goal in the box first.',1);return}
+  say('#tmsg','Planning…');$('#ai').disabled=true;
+  try{
+    const j=await ask(`Split this study goal into 3 to 6 concrete study tasks, each taking 1 to 3 pomodoros of 25 minutes. Return {"tasks":[{"title":"...","pomodoros":2}]}. Goal: ${goal}`);
+    const ts=j.tasks||[];ts.forEach(t=>addTask(String(t.title),Math.min(5,Math.max(1,+t.pomodoros||1))));
+    $('#title').value='';say('#tmsg','Added '+ts.length+' tasks.');
+  }catch(e){say('#tmsg',e.message,1)}
+  $('#ai').disabled=false;
+};
+
+/* notes to quiz + spaced repetition */
+const DAY=864e5,GAP=[0,1,3,7,14,30];
+const due=()=>S.deck.filter(c=>c.due<=Date.now());
+const weak=()=>Object.entries(S.topics).map(([t,v])=>({t,w:v.wrong,n:v.right+v.wrong})).filter(x=>x.w>=1&&x.w/x.n>=.4).sort((a,b)=>b.w-a.w).slice(0,3);
+const upd=()=>{
+  const n=due().length;$('#rev').textContent=`Review due cards (${n})`;$('#rev').disabled=!n;
+  const w=weak();
+  $('#weak').textContent=w.length?'Weak spots: '+w.map(x=>`${x.t} (${x.w} of ${x.n} missed)`).join(', ')+'. New quizzes will focus on these.':'Weak spots show up here once you miss a few questions.';
+};
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+$('#file').onchange=async e=>{const f=e.target.files[0];if(f)$('#notes').value=await f.text()};
+$('#gen').onclick=async()=>{
+  const notes=$('#notes').value.trim().slice(0,8000),n=Math.min(10,Math.max(3,+$('#nq').value||5));
+  const w=weak(),hint=w.length?'\n\nThe student has struggled with: '+w.map(x=>x.t).join(', ')+'. If the notes cover these, make at least half the questions about them.':'';
+  if(notes.length<80){say('#qmsg','Paste at least a few sentences of notes first.',1);return}
+  say('#qmsg',S.ai.provider==='ollama'?'Writing your quiz… DeepSeek thinks first, so this can take a minute.':'Writing your quiz…');$('#gen').disabled=true;
+  try{
+    const j=await ask(`You are a study coach. From the notes below write ${n} multiple-choice questions with 4 choices each and exactly one correct choice. Use only facts stated in the notes. Return {"cards":[{"q":"question","choices":["a","b","c","d"],"answer":0,"why":"one-sentence explanation","topic":"2-4 word topic name"}]} where answer is the index (0-3) of the correct choice.${hint}\n\nNOTES:\n${notes}`);
+    const cards=(j.cards||[]).filter(c=>c&&c.q&&Array.isArray(c.choices)&&c.choices[c.answer]!==undefined).map(c=>{
+      const right=String(c.choices[c.answer]),ch=shuffle(c.choices.map(String));
+      return{q:String(c.q),choices:ch,answer:ch.indexOf(right),why:String(c.why||''),topic:String(c.topic||'').trim().slice(0,40),box:0,due:Date.now()};
+    });
+    if(!cards.length)throw new Error('The AI returned no usable questions. Try again.');
+    S.deck.push(...cards);save();say('#qmsg','');run(cards,'Quiz');
+  }catch(e){say('#qmsg',e.message,1)}
+  $('#gen').disabled=false;
+};
+function run(cards,label){
+  let i=0,ok=0;const box=$('#quiz');$('#setup').hidden=true;box.hidden=false;
+  const end=()=>{$('#setup').hidden=false;box.hidden=true;upd()};
+  const step=()=>{
+    if(i>=cards.length){box.innerHTML=`<p class="q">${label} complete: ${ok} of ${cards.length} correct.</p><p class="msg">Missed questions come back in your next review.</p><button class="p" id="back">Done</button>`;$('#back').onclick=end;return}
+    const c=cards[i];
+    box.innerHTML=`<p class="m">Question ${i+1} of ${cards.length}</p><p class="q">${esc(c.q)}</p><div class="ch"></div><p class="msg" id="why" role="status"></p><button class="p" id="nx" hidden>Next</button>`;
+    const ch=box.querySelector('.ch');
+    c.choices.forEach((t,k)=>{
+      const b=document.createElement('button');b.textContent=t;
+      b.onclick=()=>{
+        const right=k===c.answer;if(right)ok++;
+        if(c.topic){const t=S.topics[c.topic]=S.topics[c.topic]||{right:0,wrong:0};right?t.right++:t.wrong++}
+        ch.querySelectorAll('button').forEach((x,j)=>{x.disabled=true;if(j===c.answer)x.classList.add('ok');else if(j===k)x.classList.add('no')});
+        c.box=right?Math.min(c.box+1,5):0;c.due=Date.now()+GAP[c.box]*DAY;save();
+        say('#why',(right?'Correct. ':'Not quite. ')+c.why);
+        const nx=$('#nx');nx.hidden=false;nx.focus();nx.onclick=()=>{i++;step()};
+      };
+      ch.appendChild(b);
+    });
+  };
+  step();
+}
+$('#rev').onclick=()=>run(due().slice(0,10),'Review');
+$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S.deck)],{type:'application/json'}));a.download='focusdesk-deck.json';a.click()};
+$('#imp').onchange=async e=>{
+  try{const d=JSON.parse(await e.target.files[0].text()).filter(c=>c.q&&Array.isArray(c.choices));S.deck.push(...d);save();upd();say('#qmsg','Imported '+d.length+' cards.')}
+  catch(_){say('#qmsg','That file is not a FocusDesk deck.',1)}
+};
+
+/* backup + restore */
+$('#bk').onclick=()=>{
+  const {ai,...rest}=S,a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({app:'focusdesk',v:1,...rest},null,1)],{type:'application/json'}));
+  a.download='focusdesk-backup-'+today()+'.json';a.click();say('#smsg','Backup saved. Your API key is not included.');
+};
+$('#rs').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const d=JSON.parse(await f.text());
+    if(d.app!=='focusdesk'||!Array.isArray(d.tasks)||!Array.isArray(d.deck))throw 0;
+    if(!confirm('Replace your current tasks, stats and quiz deck with this backup?'))return;
+    S={...S,tasks:d.tasks,active:d.active||null,log:d.log||{},deck:d.deck,topics:d.topics||{},cfg:{...S.cfg,...d.cfg}};
+    save();location.reload();
+  }catch(_){say('#smsg','That file is not a FocusDesk backup.',1)}
+};
+
+/* settings */
+function bind(sel,get,set){const el=$(sel);el.value=get();el.onchange=()=>{set(el.value.trim());save()}}
+const groups=()=>{$('#gClaude').hidden=S.ai.provider!=='claude';$('#gOllama').hidden=S.ai.provider!=='ollama'};
+bind('#pv',()=>S.ai.provider,v=>{S.ai.provider=v;groups()});
+bind('#key',()=>S.ai.key,v=>S.ai.key=v);
+bind('#cm',()=>S.ai.claudeModel,v=>S.ai.claudeModel=v);
+bind('#ou',()=>S.ai.url,v=>S.ai.url=v);
+bind('#om',()=>S.ai.model,v=>S.ai.model=v);
+[['#cf','focus'],['#cs','short'],['#cl','long']].forEach(([s,k])=>bind(s,()=>S.cfg[k],v=>{S.cfg[k]=Math.min(120,Math.max(1,+v||1));$(s).value=S.cfg[k];if(!timer&&mode===k)setMode(k)}));
+groups();upd();render();draw();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
